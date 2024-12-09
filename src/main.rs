@@ -1,6 +1,5 @@
 use std::{error::Error, io};
 
-use app::ChatMessage;
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     crossterm::{
@@ -15,7 +14,7 @@ mod app;
 mod ui;
 use tokio;
 use crate::{
-    app::{AppState, CurrentScreen, ChatState},
+    app::{AppState, CurrentScreen},
     ui::ui,
 };
 
@@ -32,7 +31,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     app.load_api_key()?;
 
     enable_raw_mode()?;
-    let res = run_app(&mut terminal, &mut app).await;
+    let _ = run_app(&mut terminal, &mut app).await;
 
     // restore terminal
     disable_raw_mode()?;
@@ -47,7 +46,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut AppState) -> io::Result<bool> {
-   
     loop {
         terminal.draw(|f| ui(f, app))?;
 
@@ -60,7 +58,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut AppState) -> 
                 CurrentScreen::MainMenu => match key.code {
                     KeyCode::Char('n') => {
                         app.current_screen = CurrentScreen::Chat;
-                        if let Err(e) = app.new_chat() {
+                        if let Err(_) = app.new_chat() {
                             return Ok(false);
                         }
                     }
@@ -72,16 +70,25 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut AppState) -> 
                 CurrentScreen::Chat if key.kind == KeyEventKind::Press => {
                     match key.code {
                         KeyCode::Enter => {
-                            app.send_message().await;
+                            let res = app.send_message().await;
+                            if let Err(_) = res {
+                                return Ok(false);
+                            }
                         }
                         KeyCode::Backspace => {
-                            app.chat_menu.current_inp.pop();
+                            app.delete_char();
                         }
                         KeyCode::Esc => {
                             app.current_screen = CurrentScreen::MainMenu;
                         }
+                        KeyCode::Left => {
+                            app.move_cursor_left();
+                        }
+                        KeyCode::Right => {
+                            app.move_cursor_right();
+                        }
                         KeyCode::Char(value) => {
-                            app.chat_menu.current_inp.push(value);
+                            app.enter_char(value);
                         }
                         _ => {}
                     }

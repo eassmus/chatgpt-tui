@@ -63,12 +63,22 @@ pub fn ui(frame: &mut Frame, app: &AppState) {
                 .style(Style::default());
 
             let curr_message = Paragraph::new(Text::styled(
-                app.chat_menu.current_inp.clone() + "|",
+                app.chat_menu.current_inp.clone(),
                 Style::default().fg(Color::Green),
             ))
             .block(message_block);
 
             frame.render_widget(curr_message, chunks[2]);
+
+
+            #[allow(clippy::cast_possible_truncation)]
+            frame.set_cursor_position(ratatui::layout::Position::new(
+                // Draw the cursor at the current position in the input field.
+                // This position is can be controlled via the left and right arrow key
+                chunks[2].x + app.chat_menu.index as u16 + 1,
+                // Move one line down, from the border to the input line
+                chunks[2].y + 1,
+            ))
         },
         CurrentScreen::MainMenu => {
             let title_block = Block::default()
@@ -76,13 +86,12 @@ pub fn ui(frame: &mut Frame, app: &AppState) {
                 .style(Style::default());
 
             let title = Paragraph::new(Text::styled(
-                "Welcome to GPT-TUI \n\n'n' for a new chat; 'q' to quit",
+                "Welcome to GPT-TUI \n\n'n' for a new chat \n'q' to quit",
                 Style::default().fg(Color::Green),
             ))
             .block(title_block);
 
             frame.render_widget(title, frame.area());
         },
-        _ => {}
     }
 }
