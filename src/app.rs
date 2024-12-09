@@ -142,8 +142,7 @@ impl AppState {
         Ok(())
     }
 
-    pub fn load_api_key(&mut self) -> Result<(), Box<dyn Error>> {
-        let file_path = "/home/pulsar/.config/gpttui/key";
+    pub fn load_api_key(&mut self, file_path : &str) -> Result<(), Box<dyn Error>> {
         let contents = fs::read_to_string(file_path)?;
         self.api_key = Some(contents.trim().to_owned());
         Ok(())

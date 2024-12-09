@@ -1,4 +1,5 @@
 use std::{error::Error, io};
+use std::env;
 
 use ratatui::{
     backend::{Backend, CrosstermBackend},
@@ -20,15 +21,22 @@ use crate::{
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    let arg = env::args().nth(1);
+    let mut app = AppState::new();
+    match arg {
+        Some(arg) => {
+            app.load_api_key(arg.as_str())?;
+        }
+        _ => {
+            println!("Please provide a API Key file path.");
+            return Ok(());
+        }
+    }
     // setup terminal
     let mut stderr = io::stderr(); // This is a special case. Normally using stdout is fine
     execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stderr);
     let mut terminal = Terminal::new(backend)?;
-
-    // create app and run it
-    let mut app = AppState::new();
-    app.load_api_key()?;
 
     enable_raw_mode()?;
     let _ = run_app(&mut terminal, &mut app).await;
