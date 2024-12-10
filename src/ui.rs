@@ -16,7 +16,7 @@ pub fn ui(frame: &mut Frame, app: &AppState) {
                 .direction(Direction::Vertical)
                 .constraints([
                     Constraint::Length(3),
-                    Constraint::Min(1),
+                    Constraint::Min(3),
                     Constraint::Length(3),
                 ])
                 .split(frame.area());
@@ -59,6 +59,12 @@ pub fn ui(frame: &mut Frame, app: &AppState) {
 
             frame.render_widget(messages, chunks[1]);
 
+            #[allow(clippy::cast_possible_truncation)]
+            let y_pos = chunks[2].y + 1;
+            let x_pos =
+                chunks[2].x + 1 + std::cmp::min(chunks[2].width - 3, app.chat_menu.index as u16);
+            frame.set_cursor_position(ratatui::layout::Position::new(x_pos, y_pos));
+
             let message_block = Block::default()
                 .borders(Borders::ALL)
                 .style(Style::default());
@@ -67,18 +73,13 @@ pub fn ui(frame: &mut Frame, app: &AppState) {
                 app.chat_menu.current_inp.clone(),
                 Style::default().fg(Color::Green),
             ))
-            .block(message_block);
+            .block(message_block)
+            .scroll((
+                0,
+                (app.chat_menu.index as u16).saturating_sub(chunks[2].width - 3),
+            ));
 
             frame.render_widget(curr_message, chunks[2]);
-
-            #[allow(clippy::cast_possible_truncation)]
-            frame.set_cursor_position(ratatui::layout::Position::new(
-                // Draw the cursor at the current position in the input field.
-                // This position is can be controlled via the left and right arrow key
-                chunks[2].x + app.chat_menu.index as u16 + 1,
-                // Move one line down, from the border to the input line
-                chunks[2].y + 1,
-            ))
         }
         CurrentScreen::MainMenu => {
             let title_block = Block::default()
