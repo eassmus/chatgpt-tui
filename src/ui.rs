@@ -34,7 +34,7 @@ pub fn ui(frame: &mut Frame, app: &AppState) {
             frame.render_widget(title, chunks[0]);
 
             let mut lines = Vec::new();
-            for message in &app.chat_menu.messages {
+            for message in app.chat_menu.messages.iter().rev() {
                 match message.role {
                     Chatter::Human => {
                         lines.push(Line::from(Span::styled(
@@ -52,10 +52,11 @@ pub fn ui(frame: &mut Frame, app: &AppState) {
             }
 
             let full_text = Text::from(lines);
-            let messages = Paragraph::new(full_text)                
+            let messages = Paragraph::new(full_text)
                 .block(Block::bordered().title("Messages"))
-                .wrap(Wrap { trim: false });
-            
+                .wrap(Wrap { trim: false })
+                .scroll((app.start_line, 0));
+
             frame.render_widget(messages, chunks[1]);
 
             let message_block = Block::default()
@@ -70,7 +71,6 @@ pub fn ui(frame: &mut Frame, app: &AppState) {
 
             frame.render_widget(curr_message, chunks[2]);
 
-
             #[allow(clippy::cast_possible_truncation)]
             frame.set_cursor_position(ratatui::layout::Position::new(
                 // Draw the cursor at the current position in the input field.
@@ -79,7 +79,7 @@ pub fn ui(frame: &mut Frame, app: &AppState) {
                 // Move one line down, from the border to the input line
                 chunks[2].y + 1,
             ))
-        },
+        }
         CurrentScreen::MainMenu => {
             let title_block = Block::default()
                 .borders(Borders::ALL)
@@ -92,6 +92,6 @@ pub fn ui(frame: &mut Frame, app: &AppState) {
             .block(title_block);
 
             frame.render_widget(title, frame.area());
-        },
+        }
     }
 }

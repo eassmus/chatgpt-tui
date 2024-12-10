@@ -1,5 +1,5 @@
-use std::{error::Error, io};
 use std::env;
+use std::{error::Error, io};
 
 use ratatui::{
     backend::{Backend, CrosstermBackend},
@@ -13,11 +13,11 @@ use ratatui::{
 
 mod app;
 mod ui;
-use tokio;
 use crate::{
     app::{AppState, CurrentScreen},
     ui::ui,
 };
+use tokio;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -49,7 +49,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         DisableMouseCapture
     )?;
     terminal.show_cursor()?;
-    
+
     Ok(())
 }
 
@@ -75,32 +75,36 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut AppState) -> 
                     }
                     _ => {}
                 },
-                CurrentScreen::Chat if key.kind == KeyEventKind::Press => {
-                    match key.code {
-                        KeyCode::Enter => {
-                            let res = app.send_message().await;
-                            if let Err(_) = res {
-                                return Ok(false);
-                            }
+                CurrentScreen::Chat if key.kind == KeyEventKind::Press => match key.code {
+                    KeyCode::Enter => {
+                        let res = app.send_message().await;
+                        if let Err(_) = res {
+                            return Ok(false);
                         }
-                        KeyCode::Backspace => {
-                            app.delete_char();
-                        }
-                        KeyCode::Esc => {
-                            app.current_screen = CurrentScreen::MainMenu;
-                        }
-                        KeyCode::Left => {
-                            app.move_cursor_left();
-                        }
-                        KeyCode::Right => {
-                            app.move_cursor_right();
-                        }
-                        KeyCode::Char(value) => {
-                            app.enter_char(value);
-                        }
-                        _ => {}
                     }
-                }
+                    KeyCode::Backspace => {
+                        app.delete_char();
+                    }
+                    KeyCode::Esc => {
+                        app.current_screen = CurrentScreen::MainMenu;
+                    }
+                    KeyCode::Left => {
+                        app.move_cursor_left();
+                    }
+                    KeyCode::Right => {
+                        app.move_cursor_right();
+                    }
+                    KeyCode::Up => {
+                        app.move_row_start_up();
+                    }
+                    KeyCode::Down => {
+                        app.move_row_start_down();
+                    }
+                    KeyCode::Char(value) => {
+                        app.enter_char(value);
+                    }
+                    _ => {}
+                },
                 _ => {}
             }
         }

@@ -1,6 +1,6 @@
-use std::{error::Error, fmt, fs};
 use chatgpt::client::ChatGPT;
 use chatgpt::prelude::Conversation;
+use std::{error::Error, fmt, fs};
 
 pub enum Chatter {
     AI,
@@ -13,14 +13,18 @@ pub struct ChatMessage {
 }
 
 pub struct ChatState {
-    pub messages : Vec<ChatMessage>,
-    pub current_inp : String,
+    pub messages: Vec<ChatMessage>,
+    pub current_inp: String,
     pub index: usize,
 }
 
 impl ChatState {
     fn new() -> ChatState {
-        ChatState { messages: Vec::new(), current_inp : String::new(), index: 0 }
+        ChatState {
+            messages: Vec::new(),
+            current_inp: String::new(),
+            index: 0,
+        }
     }
 }
 
@@ -35,6 +39,7 @@ pub struct AppState {
     pub current_screen: CurrentScreen,
     client: Option<chatgpt::client::ChatGPT>,
     conversation: Option<Conversation>,
+    pub start_line: u16,
 }
 
 #[derive(Debug)]
@@ -54,8 +59,9 @@ impl AppState {
             chat_menu: ChatState::new(),
             api_key: None,
             current_screen: CurrentScreen::MainMenu,
-            client : None,
-            conversation : None,
+            client: None,
+            conversation: None,
+            start_line: 0,
         }
     }
 
@@ -66,10 +72,8 @@ impl AppState {
                 self.conversation = Some(self.client.as_mut().unwrap().new_conversation());
                 self.chat_menu = ChatState::new();
                 Ok(())
-            },
-            _ => {
-                Err(Box::new(KeyError))
-            },
+            }
+            _ => Err(Box::new(KeyError)),
         }
     }
 
@@ -90,7 +94,8 @@ impl AppState {
     }
 
     fn byte_index(&self) -> usize {
-        self.chat_menu.current_inp
+        self.chat_menu
+            .current_inp
             .char_indices()
             .map(|(i, _)| i)
             .nth(self.chat_menu.index)
@@ -100,21 +105,16 @@ impl AppState {
     pub fn delete_char(&mut self) {
         let is_not_cursor_leftmost = self.chat_menu.index != 0;
         if is_not_cursor_leftmost {
-            // Method "remove" is not used on the saved text for deleting the selected char.
-            // Reason: Using remove on String works on bytes instead of the chars.
-            // Using remove would require special care because of char boundaries.
-
             let current_index = self.chat_menu.index;
             let from_left_to_current_index = current_index - 1;
-
-            // Getting all characters before the selected character.
-            let before_char_to_delete = self.chat_menu.current_inp.chars().take(from_left_to_current_index);
-            // Getting all characters after selected character.
+            let before_char_to_delete = self
+                .chat_menu
+                .current_inp
+                .chars()
+                .take(from_left_to_current_index);
             let after_char_to_delete = self.chat_menu.current_inp.chars().skip(current_index);
-
-            // Put all characters together except the selected one.
-            // By leaving the selected one out, it is forgotten and therefore deleted.
-            self.chat_menu.current_inp = before_char_to_delete.chain(after_char_to_delete).collect();
+            self.chat_menu.current_inp =
+                before_char_to_delete.chain(after_char_to_delete).collect();
             self.move_cursor_left();
         }
     }
@@ -129,22 +129,42 @@ impl AppState {
 
     pub async fn send_message(&mut self) -> Result<(), Box<dyn Error>> {
         self.reset_cursor();
-        let message : String = self.chat_menu.current_inp.clone();
-        let new_message = ChatMessage {message: self.chat_menu.current_inp.clone(), role: Chatter::Human};
+        let message: String = self.chat_menu.current_inp.clone();
+        let new_message = ChatMessage {
+            message: self.chat_menu.current_inp.clone(),
+            role: Chatter::Human,
+        };
         self.chat_menu.messages.push(new_message);
         self.chat_menu.current_inp = String::new();
-        let response = self.conversation.as_mut().unwrap().send_message(&message).await.unwrap();
+        let response = self
+            .conversation
+            .as_mut()
+            .unwrap()
+            .send_message(&message)
+            .await
+            .unwrap();
         let mut message = "".to_owned();
         for choice in response.message_choices {
             message.push_str(&choice.message.content);
         }
-        self.chat_menu.messages.push(ChatMessage { role: Chatter::AI, message: message.to_string() });
+        self.chat_menu.messages.push(ChatMessage {
+            role: Chatter::AI,
+            message: message.to_string(),
+        });
         Ok(())
     }
 
-    pub fn load_api_key(&mut self, file_path : &str) -> Result<(), Box<dyn Error>> {
+    pub fn load_api_key(&mut self, file_path: &str) -> Result<(), Box<dyn Error>> {
         let contents = fs::read_to_string(file_path)?;
         self.api_key = Some(contents.trim().to_owned());
         Ok(())
+    }
+
+    pub fn move_row_start_up(&mut self) {
+        self.start_line = self.start_line.saturating_sub(1);
+    }
+
+    pub fn move_row_start_down(&mut self) {
+        self.start_line = self.start_line.saturating_add(1);
     }
 }
