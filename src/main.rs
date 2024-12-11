@@ -33,12 +33,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     }
     // setup terminal
-    let mut stderr = io::stderr(); // This is a special case. Normally using stdout is fine
-    execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stderr);
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
     enable_raw_mode()?;
+
     let res = run_app(&mut terminal, &mut app).await;
 
     // restore terminal
@@ -50,9 +51,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )?;
     terminal.show_cursor()?;
 
-    if let Err(err) = res {
-        println!("Error: {}", err);
-    }
+    //restore defualts before possibly exploding
+    res?;
 
     Ok(())
 }

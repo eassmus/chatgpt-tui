@@ -51,6 +51,7 @@ pub struct AppState {
     client: Option<chatgpt::client::ChatGPT>,
     conversation: Option<Conversation>,
     pub start_line: u16,
+    pub used_lines: u16,
 }
 
 #[derive(Debug)]
@@ -73,6 +74,7 @@ impl AppState {
             client: None,
             conversation: None,
             start_line: 0,
+            used_lines: 0,
         }
     }
 
@@ -93,6 +95,7 @@ impl AppState {
     }
 
     pub async fn send_message(&mut self) -> Result<(), Box<dyn Error>> {
+        self.start_line = 0;
         let curr_lines = self.chat_menu.text_area.lines();
         let message_text = curr_lines.join("\n");
         let message = ChatMessage {
@@ -133,6 +136,9 @@ impl AppState {
     }
 
     pub fn move_row_start_down(&mut self) {
-        self.start_line = self.start_line.saturating_add(1);
+        self.start_line = std::cmp::min(
+            self.start_line.saturating_add(1),
+            self.used_lines.saturating_sub(1),
+        );
     }
 }

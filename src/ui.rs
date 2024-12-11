@@ -8,8 +8,7 @@ use ratatui::{
 
 use crate::app::{AppState, Chatter, CurrentScreen};
 
-// ANCHOR: method_sig
-pub fn ui(frame: &mut Frame, app: &AppState) {
+pub fn ui(frame: &mut Frame, app: &mut AppState) {
     match app.current_screen {
         CurrentScreen::Chat => {
             let chunks = Layout::default()
@@ -59,6 +58,8 @@ pub fn ui(frame: &mut Frame, app: &AppState) {
 
             frame.render_widget(messages, chunks[1]);
             frame.render_widget(&app.chat_menu.text_area, chunks[2]);
+
+            app.used_lines = 10000; // TODO: fix this
         }
         CurrentScreen::MainMenu => {
             let title_block = Block::default()
