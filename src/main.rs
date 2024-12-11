@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut terminal = Terminal::new(backend)?;
 
     enable_raw_mode()?;
-    let _ = run_app(&mut terminal, &mut app).await;
+    let res = run_app(&mut terminal, &mut app).await;
 
     // restore terminal
     disable_raw_mode()?;
@@ -50,14 +50,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )?;
     terminal.show_cursor()?;
 
+    if let Err(err) = res {
+        println!("Error: {}", err);
+    }
+
     Ok(())
 }
 
-async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut AppState) -> io::Result<bool> {
+async fn run_app<B: Backend>(
+    terminal: &mut Terminal<B>,
+    app: &mut AppState,
+) -> Result<bool, Box<dyn Error>> {
     loop {
         terminal.draw(|f| ui(f, app))?;
-
-        if let Event::Key(key) = event::read()? {
+        let e = event::read()?;
+        if let Event::Key(key) = e {
             if key.kind == event::KeyEventKind::Release {
                 // Skip events that are not KeyEventKind::Press
                 continue;
@@ -66,9 +73,7 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut AppState) -> 
                 CurrentScreen::MainMenu => match key.code {
                     KeyCode::Char('n') => {
                         app.current_screen = CurrentScreen::Chat;
-                        if let Err(_) = app.new_chat() {
-                            return Ok(false);
-                        }
+                        app.new_chat()?;
                     }
                     KeyCode::Char('q') => {
                         return Ok(true);
@@ -77,22 +82,10 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut AppState) -> 
                 },
                 CurrentScreen::Chat if key.kind == KeyEventKind::Press => match key.code {
                     KeyCode::Enter => {
-                        let res = app.send_message().await;
-                        if let Err(_) = res {
-                            return Ok(false);
-                        }
-                    }
-                    KeyCode::Backspace => {
-                        app.delete_char();
+                        app.send_message().await?;
                     }
                     KeyCode::Esc => {
                         app.current_screen = CurrentScreen::MainMenu;
-                    }
-                    KeyCode::Left => {
-                        app.move_cursor_left();
-                    }
-                    KeyCode::Right => {
-                        app.move_cursor_right();
                     }
                     KeyCode::Up => {
                         app.move_row_start_up();
@@ -100,12 +93,23 @@ async fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut AppState) -> 
                     KeyCode::Down => {
                         app.move_row_start_down();
                     }
-                    KeyCode::Char(value) => {
-                        app.enter_char(value);
+                    _ => {
+                        app.enter_char(key.into());
                     }
-                    _ => {}
                 },
                 _ => {}
+            }
+        } else if let Event::Mouse(event) = e {
+            if app.current_screen == CurrentScreen::Chat {
+                match event.kind {
+                    event::MouseEventKind::ScrollUp => {
+                        app.move_row_start_up();
+                    }
+                    event::MouseEventKind::ScrollDown => {
+                        app.move_row_start_down();
+                    }
+                    _ => {}
+                }
             }
         }
     }

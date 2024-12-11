@@ -58,28 +58,7 @@ pub fn ui(frame: &mut Frame, app: &AppState) {
                 .scroll((app.start_line, 0));
 
             frame.render_widget(messages, chunks[1]);
-
-            #[allow(clippy::cast_possible_truncation)]
-            let y_pos = chunks[2].y + 1;
-            let x_pos =
-                chunks[2].x + 1 + std::cmp::min(chunks[2].width - 3, app.chat_menu.index as u16);
-            frame.set_cursor_position(ratatui::layout::Position::new(x_pos, y_pos));
-
-            let message_block = Block::default()
-                .borders(Borders::ALL)
-                .style(Style::default());
-
-            let curr_message = Paragraph::new(Text::styled(
-                app.chat_menu.current_inp.clone(),
-                Style::default().fg(Color::Green),
-            ))
-            .block(message_block)
-            .scroll((
-                0,
-                (app.chat_menu.index as u16).saturating_sub(chunks[2].width - 3),
-            ));
-
-            frame.render_widget(curr_message, chunks[2]);
+            frame.render_widget(&app.chat_menu.text_area, chunks[2]);
         }
         CurrentScreen::MainMenu => {
             let title_block = Block::default()

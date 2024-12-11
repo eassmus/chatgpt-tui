@@ -1,6 +1,11 @@
 use chatgpt::client::ChatGPT;
 use chatgpt::prelude::Conversation;
+use ratatui::{
+    style::Style,
+    widgets::{Block, Borders},
+};
 use std::{error::Error, fmt, fs};
+use tui_textarea::{Input, TextArea};
 
 pub enum Chatter {
     AI,
@@ -14,20 +19,26 @@ pub struct ChatMessage {
 
 pub struct ChatState {
     pub messages: Vec<ChatMessage>,
-    pub current_inp: String,
-    pub index: usize,
+    pub text_area: TextArea<'static>,
 }
 
 impl ChatState {
     fn new() -> ChatState {
+        let mut text_area = TextArea::default();
+        text_area.set_block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(Style::default()),
+        );
+        text_area.set_cursor_line_style(Style::default());
         ChatState {
             messages: Vec::new(),
-            current_inp: String::new(),
-            index: 0,
+            text_area: text_area,
         }
     }
 }
 
+#[derive(PartialEq)]
 pub enum CurrentScreen {
     MainMenu,
     Chat,
@@ -77,70 +88,27 @@ impl AppState {
         }
     }
 
-    pub fn move_cursor_left(&mut self) {
-        let cursor_moved_left = self.chat_menu.index.saturating_sub(1);
-        self.chat_menu.index = self.clamp_cursor(cursor_moved_left);
-    }
-
-    pub fn move_cursor_right(&mut self) {
-        let cursor_moved_right = self.chat_menu.index.saturating_add(1);
-        self.chat_menu.index = self.clamp_cursor(cursor_moved_right);
-    }
-
-    pub fn enter_char(&mut self, new_char: char) {
-        let index = self.byte_index();
-        self.chat_menu.current_inp.insert(index, new_char);
-        self.move_cursor_right();
-    }
-
-    fn byte_index(&self) -> usize {
-        self.chat_menu
-            .current_inp
-            .char_indices()
-            .map(|(i, _)| i)
-            .nth(self.chat_menu.index)
-            .unwrap_or(self.chat_menu.current_inp.len())
-    }
-
-    pub fn delete_char(&mut self) {
-        let is_not_cursor_leftmost = self.chat_menu.index != 0;
-        if is_not_cursor_leftmost {
-            let current_index = self.chat_menu.index;
-            let from_left_to_current_index = current_index - 1;
-            let before_char_to_delete = self
-                .chat_menu
-                .current_inp
-                .chars()
-                .take(from_left_to_current_index);
-            let after_char_to_delete = self.chat_menu.current_inp.chars().skip(current_index);
-            self.chat_menu.current_inp =
-                before_char_to_delete.chain(after_char_to_delete).collect();
-            self.move_cursor_left();
-        }
-    }
-
-    fn clamp_cursor(&self, new_cursor_pos: usize) -> usize {
-        new_cursor_pos.clamp(0, self.chat_menu.current_inp.chars().count())
-    }
-
-    fn reset_cursor(&mut self) {
-        self.chat_menu.index = 0;
+    pub fn enter_char(&mut self, input: Input) {
+        self.chat_menu.text_area.input(input);
     }
 
     pub async fn send_message(&mut self) -> Result<(), Box<dyn Error>> {
-        self.reset_cursor();
-        let message: String = self.chat_menu.current_inp.clone();
-        let new_message = ChatMessage {
-            message: self.chat_menu.current_inp.clone(),
+        let curr_lines = self.chat_menu.text_area.lines();
+        let message_text = curr_lines.join("\n");
+        let message = ChatMessage {
+            message: message_text.clone(),
             role: Chatter::Human,
         };
-        self.chat_menu.messages.push(new_message);
-        self.chat_menu.current_inp = String::new();
+        self.chat_menu.messages.push(message);
+        self.chat_menu
+            .text_area
+            .move_cursor(tui_textarea::CursorMove::Head);
+        self.chat_menu.text_area.delete_str(message_text.len());
         let response = self
             .conversation
             .as_mut()
             .unwrap()
-            .send_message(&message)
+            .send_message(&message_text)
             .await
             .unwrap();
         let mut message = "".to_owned();
