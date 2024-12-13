@@ -7,6 +7,7 @@ use ratatui::{
 };
 
 use crate::app::{AppState, Chatter, CurrentScreen};
+use crate::AVAILABLE_MODELS;
 
 pub fn ui(frame: &mut Frame, app: &mut AppState) {
     match app.current_screen {
@@ -65,9 +66,9 @@ pub fn ui(frame: &mut Frame, app: &mut AppState) {
             let title_block = Block::default()
                 .borders(Borders::ALL)
                 .style(Style::default());
-
+            let mode_chosen = AVAILABLE_MODELS[app.selected_mode].as_ref();
             let title = Paragraph::new(Text::styled(
-                "Welcome to GPT-TUI \n\n'n' for a new chat \n'q' to quit",
+                "Welcome to GPT-TUI \n\n'n' for a new chat \n'q' to quit \n'Tab' to change model \n\nSelected Model: ".to_owned() + mode_chosen,
                 Style::default().fg(Color::Green),
             ))
             .block(title_block);

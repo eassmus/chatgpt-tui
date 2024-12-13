@@ -19,6 +19,14 @@ use crate::{
 };
 use tokio;
 
+static AVAILABLE_MODELS: [chatgpt::prelude::ChatGPTEngine; 5] = [
+    chatgpt::prelude::ChatGPTEngine::Custom("gpt-4o-mini"),
+    chatgpt::prelude::ChatGPTEngine::Custom("gpt-4o"),
+    chatgpt::prelude::ChatGPTEngine::Custom("gpt-4-turbo"),
+    chatgpt::prelude::ChatGPTEngine::Gpt4,
+    chatgpt::prelude::ChatGPTEngine::Gpt35Turbo,
+];
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let arg = env::args().nth(1);
@@ -73,10 +81,13 @@ async fn run_app<B: Backend>(
                 CurrentScreen::MainMenu => match key.code {
                     KeyCode::Char('n') => {
                         app.current_screen = CurrentScreen::Chat;
-                        app.new_chat()?;
+                        app.new_chat(AVAILABLE_MODELS[app.selected_mode])?;
                     }
                     KeyCode::Char('q') => {
                         return Ok(true);
+                    }
+                    KeyCode::Tab => {
+                        app.selected_mode = (app.selected_mode + 1) % AVAILABLE_MODELS.len();
                     }
                     _ => {}
                 },

@@ -52,6 +52,7 @@ pub struct AppState {
     conversation: Option<Conversation>,
     pub start_line: u16,
     pub used_lines: u16,
+    pub selected_mode: usize,
 }
 
 #[derive(Debug)]
@@ -75,13 +76,22 @@ impl AppState {
             conversation: None,
             start_line: 0,
             used_lines: 0,
+            selected_mode: 0,
         }
     }
 
-    pub fn new_chat(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn new_chat(
+        &mut self,
+        engine: chatgpt::prelude::ChatGPTEngine,
+    ) -> Result<(), Box<dyn Error>> {
         match &self.api_key {
             Some(key) => {
-                self.client = Some(ChatGPT::new(key)?);
+                self.client = Some(ChatGPT::new_with_config(
+                    key,
+                    chatgpt::prelude::ModelConfigurationBuilder::default()
+                        .engine(engine)
+                        .build()?,
+                )?);
                 self.conversation = Some(self.client.as_mut().unwrap().new_conversation());
                 self.chat_menu = ChatState::new();
                 Ok(())
